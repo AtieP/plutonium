@@ -163,9 +163,9 @@ logical_sector_to_chs:
 	ret 									; Return to caller
 	
 ;
-
+; Fatal error, hangs and prints an exclamation mark
+;
 fatal_error:
-	
 	mov ah, 0Eh
 	mov al, '!'
 	int 10h
