@@ -52,11 +52,11 @@ main:
 	; Check that there is enough memory before trying to load root directory
 	clc
 	int 12h
-	jc fatal_error
+	jc fatal_memory_error
 
 	; INT 12H returns the memory available in (AX)
 	cmp ax, 64 ; Check for 640 KB
-	jl fatal_error
+	jl fatal_memory_error
 	
 ;
 ; Reads kernel and bootstraps it
@@ -269,8 +269,15 @@ reset_floppy:
 ; Fatal error, hangs and prints an exclamation mark
 ;
 fatal_error:
+	mov al, '^'
 	mov ah, 0Eh
-	mov al, '!'
+	int 10h
+	
+	jmp $ ; Hang
+	
+fatal_memory_error:
+	mov al, '%'
+	mov ah, 0Eh
 	int 10h
 	
 	jmp $ ; Hang
