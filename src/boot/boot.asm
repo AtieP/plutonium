@@ -77,8 +77,43 @@ read_kernel:
 	mov al, 14
 	call read_sector
 	
-	; TODO: Find root directory entry
+	; We now have the root entries in our buffer, time to read them
+	; and find the kernel
 	
+	mov ax, ds
+	mov es, ax
+	mov di, root_dir_entry_storage
+	
+	xor ax, ax
+.find_kernel:
+	mov si, kernelName
+	mov cx, 11 ; A FAT12 filename is 11 chars lenghty
+	
+	rep cmpsb
+	je short .found_file
+	
+	add ax, 32 ; Skip one full entry
+	
+	mov di, root_dir_entry_storage
+	add di, ax
+	
+	cmp byte [di], 0 ; Check if root directory has ended yet
+	jnz short .find_kernel
+	
+	jmp fatal_error ; File not found
+.found_file:
+	mov ah, 0Eh
+	mov al, 'Y'
+	int 10h
+
+	jmp $
+	
+	
+kernelName		db "KERNEL  SYS"
+	
+;
+; Reads a sector (use logical_sector_to_chs before calling!)
+;
 read_sector:
 	mov ah, 2 ; INT 13H, AH 2: Read disk sectors
 	push dx
