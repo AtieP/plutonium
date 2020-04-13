@@ -33,7 +33,7 @@ nop
 oem_id db				"BOOTDISK"			; OEM ID
 bytes_per_sector		dw 512				; Bytes per sector
 sectors_per_cluster		db 18				; Sectors per cluster
-reserved_sectors		dw 2				; Reserved sectors
+reserved_sectors		dw 1				; Reserved sectors
 number_of_fats			db 2				; FATs on the storage media
 root_directory_entries	dw 224				; Directory entries
 total_logical_sectors	dw 2880				; Total of sectors in the logical volume
@@ -43,7 +43,7 @@ sectors_per_track		dw 18				; Sectors per track
 sides					dw 2				; Sides
 hidden_sectors			dd 0				; Hidden sectors
 large_sectors			dd 0				; Large sectors
-drive_number			db 0				; Drive number
+drive_number			dw 0				; Drive number
 signature				db 41				; Signature
 volume_id				dd 00000000h		; Volume ID
 volume_label			db "PLUTONIUM  "	; Volume label
