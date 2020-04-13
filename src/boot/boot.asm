@@ -49,7 +49,7 @@ main:
 	mov ax, 07C0h
 	mov ds, ax
 
-	; Check that there is engough memory before trying to load root directory
+	; Check that there is enough memory before trying to load root directory
 	clc
 	int 12h
 	jc fatal_error
