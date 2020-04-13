@@ -23,7 +23,7 @@ SEC_TR: dw 18                   ; Sectors per track
 SIDES:  dw 2                    ; Sides
 HID_SC: dd 0                    ; Hidden sectors
 LRG_SC: dd 0                    ; Large sectors
-DRV_NU: db 0                    ; Drive number
+DRV_NU: dw 0                    ; Drive number
 SIG_NU: db 41                   ; Signature
 VOL_ID: dd 00000000h            ; Volume ID
 VOL_LB: db "PLUTONIUM  "        ; Volume label
