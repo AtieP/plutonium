@@ -34,10 +34,12 @@ volume_id				dd 00000000h		; Volume ID
 volume_label			db "PLUTONIUM  "	; Volume label
 file_system_signature	db "FAT12   "		; File system
 
-;
+; -------------------------------
 ; Entry point for our bootloader
-;
+; -------------------------------
+
 main:
+
 	; Set the stack 544 bytes away from the bootloader
 	mov ax, 07C0h+544
 	cli
@@ -45,16 +47,12 @@ main:
 	mov sp, 4096
 	sti
 	
-	; Set the corret data segment
+	; Set the correct data segment
 	mov ax, 07C0h
 	mov ds, ax
 	
 	; TODO: Add read
 	
-;
-; Include the Floppy Disk Bootloader signature this signature is needed
-; by legacy BIOSes and various virtualization programs like QEMU or
-; Bochs, without it, our bootloader will be rendered as unusable.
-;
-times 510-($-$$) db 0
-dw 0AA55h
+
+times 510 - ($ - $$) db 0
+dw 0AA55h                                   ; Needed for booting (this is the magic number)
