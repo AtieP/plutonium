@@ -87,20 +87,21 @@ read_kernel:
 	xor ax, ax
 .find_kernel:
 	mov si, kernelName
-	mov cx, 11 ; A FAT12 filename is 11 chars lenghty
+	mov cx, 11 								; A FAT12 filename is 11 chars long
 	
 	rep cmpsb
 	je short .found_file
 	
-	add ax, 32 ; Skip one full entry
+	add ax, 32 								; Skip one full entry
 	
 	mov di, root_dir_entry_storage
 	add di, ax
 	
-	cmp byte [di], 0 ; Check if root directory has ended yet
+	cmp byte [di], 0 						; Check if root directory has ended yet
 	jnz short .find_kernel
 	
-	jmp fatal_error ; File not found
+	jmp fatal_error 						; File not found
+	
 .found_file:
 	mov ah, 0Eh
 	mov al, 'Y'
