@@ -38,7 +38,6 @@ file_system_signature	db "FAT12   "		; File system
 ; Entry point for our bootloader
 ;
 main:
-
 	; Set the stack 544 bytes away from the bootloader
 	mov ax, 07C0h+544
 	cli
