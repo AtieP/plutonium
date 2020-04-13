@@ -49,7 +49,80 @@ main:
 	mov ax, 07C0h
 	mov ds, ax
 	
-	; TODO: Add read
+;
+; Reads kernel and bootstraps it
+; else returns error
+;
+read_kernel:
+	; Read root directory entries (root directory starts at
+	; sector 19)
+	mov ax, 19
+	call logical_sector_to_chs
+	
+	; Set int 13h to save read sectors into the root directory storage
+	; place
+	mov ax, ds
+	mov es, ax
+	mov bx, root_dir_entry_storage
+	
+	mov al, 14
+	call read_sector
+	
+	; TODO: Find root directory entry
+	
+read_sector:
+	mov ah, 2 ; INT 13H, AH 2: Read disk sectors
+	push dx
+.loop:
+	pop dx ; DX is destroyed by some bogus BIOS
+	push dx
+	stc ; Set carry flag for bogus BIOS
+	int 13h
+	
+	jnc short .end ; End if no error
+	
+	call reset_floppy ; Retry!
+	jnc short .loop
+	
+	jmp fatal_error ; Double error on floppy
+.end:
+	pop dx
+	ret
+	
+;
+; Converts logical sector (AX) to parameters for interrupt 13h
+;
+logical_sector_to_chs:
+	push bx ; Save registers
+	push ax
+	
+	mov bx, ax ; Calculate physical sector
+	xor dx, dx
+	div word [sectors_per_track]
+	inc dl ; Physical sectors starts at 1
+	mov cl, dl ; Place in CL
+	
+	mov ax, bx ; Calculate head
+	xor dx, dx
+	div word [sectors_per_track]
+	xor dx, dx ; And calculate the track
+	div word [sides]
+	mov dh, dl ; Place head
+	mov ch, al ; Place track
+	
+	pop ax ; Restore registers
+	pop bx
+	
+	; Set back the device number
+	mov dl, byte [device_number]
+	
+	ret ; Return to caller
+	
+;
+; Fatal error, (prints?) something and then (reboots?)
+;
+fatal_error:
+	jmp $
 	
 ;
 ; Include the Floppy Disk Bootloader signature this signature is needed
@@ -58,3 +131,5 @@ main:
 ;
 times 510-($-$$) db 0
 dw 0AA55h
+
+root_dir_entry_storage:
