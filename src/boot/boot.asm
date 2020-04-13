@@ -40,18 +40,18 @@ file_system_signature	db "FAT12   "		; File system
 
 main:
 
-	; Set the stack 544 bytes away from the bootloader
-	mov ax, 07C0h+544
-	cli
-	mov ss, ax
-	mov sp, 4096
-	sti
-	
-	; Set the correct data segment
-	mov ax, 07C0h
-	mov ds, ax
-	
-	; Check memory
+    ; Set the stack 544 bytes away from the bootloader
+    mov ax, 07C0h+544
+    cli
+    mov ss, ax
+    mov sp, 4096
+    sti
+    
+    ; Set the correct data segment
+    mov ax, 07C0h
+    mov ds, ax
+    
+    ; Check memory
     clc
     int 12h
     jc not_enough_memory
