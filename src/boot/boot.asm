@@ -51,8 +51,47 @@ main:
 	mov ax, 07C0h
 	mov ds, ax
 	
-	; TODO: Add read
-	
+	; Check memory
+    clc
+    int 12h
+    jc not_enough_memory
+
+    ; int 12h returns the memory available in AX
+    cmp ax, 64
+    jl not_enough_memory
+
+    jmp $
+    
+not_enough_memory:
+
+    mov si, .STR
+    call puts
+
+    xor ax, ax
+    int 16h
+
+    int 19h
+
+.STR: db "FATAL: Required 64KB of memory",0
+
+; -------------------------
+; Subroutines
+; -------------------------
+
+puts:
+    push ax
+    mov ah, 0x0e
+
+.print_chars:
+    lodsb
+    test al, al
+    jz .done
+    int 10h
+    jmp .print_chars
+
+.done:
+    pop ax
+    ret
 
 times 510 - ($ - $$) db 0
 dw 0AA55h                                   ; Needed for booting (this is the magic number)
