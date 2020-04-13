@@ -16,7 +16,7 @@ nop
 ; Diskette. Byte 0F0h indicates that this is a Floppy Diskette.
 ;
 oem_id db				"BOOTDISK"			; OEM ID
-bytes_per_sectors		dw 512				; Bytes per sector
+bytes_per_sector		dw 512				; Bytes per sector
 sectors_per_cluster		db 18				; Sectors per cluster
 reserved_sectors		dw 2				; Reserved sectors
 number_of_fats			db 2				; FATs on the storage media
@@ -103,13 +103,98 @@ read_kernel:
 	jmp fatal_error 						; File not found
 	
 .found_file:
-	mov ah, 0Eh
-	mov al, 'Y'
-	int 10h
+	mov ax, word [es:di+0Fh]				; Get cluster from root directory entry
+	mov word [cluster], ax					; Save it for future use
+	
+	xor ax, ax								; Read sector 1, where the FAT is on
+	inc ax
+	call logical_sector_to_chs
+	
+	mov di, fat_storage
+	mov bx, di
+	
+	xor ax, ax								; Make the readed sectors load at
+	mov es, ax								; 0000h:0500h so we will have our kernel
+	mov bx 0500h							; ready there!
+	
+	mov ah, 2								; Read 1 sector from disk
+	mov al, 1
+	
+	push ax
+.load_file_sector:
+	mov ax, word [cluster]					; Retrieve cluster
+	
+	add ax, 31								; Cluster+31 = File data!
+	call logical_sector_to_chs
+	
+	xor ax, ax								; Load those data into the
+	mov es, ax								; place where the kernel is being loaded
+	mov bx, 0500h							; on
+	mov bx, word [pointer]
+	
+	pop ax
+	push ax
+	
+	stc
+	int 13h
+	
+	jnc short .next_cluster
+	
+	call reset_floppy
+	jmp short .load_file_sector
+;
+; Now find the cluster by either knowing it's odd or even
+; if it is even, then mask out 12 bits of the cluster, else
+; shift it by 4 bits
+;
+.next_cluster:
+	mov ax, word [cluster]
+	xor dx, dx
+	mov bx, 3
+	mul bx
+	dec bx
+	div bx
+	
+	mov si, buffer
+	add si, ax
+	
+	mov ax, word [ds:si]					; Get a cluster word
+	
+	or dx, dx								; Check if our cluster even or odd
+	jz short .even_cluster
+.odd_cluster:
+	push cx
+	
+	mov cl, 4								; Shift our cluster by 4 bits
+	shr ax, cl
+	
+	pop cx
+	jmp short .check_eof
+.even_cluster:
+	and ax, 0FFFh							; Mask out all 12 bits
+.check_eof:
+	mov word [cluster], ax					; Put cluster in cluster
+	cmp ax, 0FF8h							; Check for EOF
+	jae short .end							; All loaded, time to jump into kernel
+	
+	push ax
+	mov ax, [bytes_per_sector]				; Go to the next sector
+	add word [pointer], ax
+	pop ax
+	
+	jmp short .load_sector
+;
+; Everything is set and no errors were made, time to jump into the kernel
+; and do anthing from there
+;
+.end:										; File is now loaded in the ram
+	pop ax									; Pop off ax
+	mov dl, byte [drive_number]				; Give kernel device number
+	
+	jmp 0000h:0500h							; Jump to kernel
 
-	jmp $
-	
-	
+cluster			dw 0
+pointer			dw 0
 kernelName		db "KERNEL  SYS"
 	
 ;
@@ -199,3 +284,4 @@ times 510-($-$$) db 0
 dw 0AA55h
 
 root_dir_entry_storage:
+fat_storage:
