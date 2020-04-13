@@ -38,6 +38,7 @@ file_system_signature	db "FAT12   "		; File system
 ; Entry point for our bootloader
 ;
 main:
+
 	; Set the stack 544 bytes away from the bootloader
 	mov ax, 07C0h+544
 	cli
@@ -45,9 +46,18 @@ main:
 	mov sp, 4096
 	sti
 	
-	; Set the corret data segment
+	; Set the correct data segment
 	mov ax, 07C0h
 	mov ds, ax
+
+	; Check that there is engough memory before trying to load root directory
+	clc
+	int 12h
+	jc fatal_error
+
+	; INT 12H returns the memory available in (AX)
+	cmp ax, 640 ; Check for 640 KB
+	jl fatal_error
 	
 ;
 ; Reads kernel and bootstraps it
@@ -122,7 +132,15 @@ logical_sector_to_chs:
 ; Fatal error, (prints?) something and then (reboots?)
 ;
 fatal_error:
-	jmp $
+	; No real need for super long messages, just a simple character
+	; would help, we also need to save bootstrapper space for
+	; routines like read_disk and root_directory loading
+	
+	mov ah, 0Eh
+	mov al, '!'
+	int 10h
+	
+	jmp $ ; Hang
 	
 ;
 ; Include the Floppy Disk Bootloader signature this signature is needed
