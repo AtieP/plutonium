@@ -3,7 +3,7 @@ cpu 8086
 org 0
 
 ;
-; Once the BIOS loads our bootloader into 07C0:0000 we will have complete
+; Once the BIOS loads our bootloader into 0000:7c00 we will have complete
 ; control of the system!. And it will be time to make a short jump to
 ; skip the BIOS Parameter Block
 ;
