@@ -55,7 +55,7 @@ main:
 	jc fatal_error
 
 	; INT 12H returns the memory available in (AX)
-	cmp ax, 640 ; Check for 640 KB
+	cmp ax, 64 ; Check for 640 KB
 	jl fatal_error
 	
 ;
@@ -115,7 +115,7 @@ read_kernel:
 	
 	xor ax, ax								; Make the readed sectors load at
 	mov es, ax								; 0000h:0500h so we will have our kernel
-	mov bx 0500h							; ready there!
+	mov bx, 0500h							; ready there!
 	
 	mov ah, 2								; Read 1 sector from disk
 	mov al, 1
@@ -155,7 +155,7 @@ read_kernel:
 	dec bx
 	div bx
 	
-	mov si, buffer
+	mov si, fat_storage
 	add si, ax
 	
 	mov ax, word [ds:si]					; Get a cluster word
@@ -182,7 +182,7 @@ read_kernel:
 	add word [pointer], ax
 	pop ax
 	
-	jmp short .load_sector
+	jmp short .load_file_sector
 ;
 ; Everything is set and no errors were made, time to jump into the kernel
 ; and do anthing from there

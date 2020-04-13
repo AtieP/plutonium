@@ -20,11 +20,15 @@ $(BIN_DIR)/kernel.sys: $(SRC_DIR)/kernel/kernel.asm
 # Final disks
 $(DSK_DIR)/pluto.flp: $(BIN_DIR)/boot.sys $(BIN_DIR)/kernel.sys
 	dd conv=notrunc if=$< of=$@
+	
 	rm -rf tmp
+	
 	mkdir tmp
 	mount -o loop -t vfat $@ tmp
+	
 	rm -rf $(BIN_DIR)/boot.sys
 	cp $(BIN_DIR)/* tmp
+	
 	sleep 0.2
 	umount tmp
 	rm -rf tmp
