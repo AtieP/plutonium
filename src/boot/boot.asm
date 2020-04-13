@@ -38,105 +38,105 @@ file_system_signature	db "FAT12   "		; File system
 ; Entry point for our bootloader
 ;
 main:
-    ; Set the stack 544 bytes away from the bootloader
-    mov ax, 07C0h+544
-    cli
-    mov ss, ax
-    mov sp, 4096
-    sti
-    
-    ; Set the correct data segment
-    mov ax, 07C0h
-    mov ds, ax
+	; Set the stack 544 bytes away from the bootloader
+	mov ax, 07C0h+544
+	cli
+	mov ss, ax
+	mov sp, 4096
+	sti
+	
+	; Set the correct data segment
+	mov ax, 07C0h
+	mov ds, ax
 
-    ; Check that there is engough memory before trying to load root directory
-    clc
-    int 12h
-    jc fatal_error
+	; Check that there is engough memory before trying to load root directory
+	clc
+	int 12h
+	jc fatal_error
 
-    ; INT 12H returns the memory available in (AX)
-    cmp ax, 640 ; Check for 640 KB
-    jl fatal_error
-    
+	; INT 12H returns the memory available in (AX)
+	cmp ax, 640 ; Check for 640 KB
+	jl fatal_error
+	
 ;
 ; Reads kernel and bootstraps it
 ; else returns error
 ;
 read_kernel:
-    ; Read root directory entries (root directory starts at
-    ; sector 19)
-    mov ax, 19
-    call logical_sector_to_chs
-    
-    ; Set int 13h to save read sectors into the root directory storage
-    ; place
-    mov ax, ds
-    mov es, ax
-    mov bx, root_dir_entry_storage
-    
-    mov al, 14
-    call read_sector
-    
-    ; TODO: Find root directory entry
-    
+	; Read root directory entries (root directory starts at
+	; sector 19)
+	mov ax, 19
+	call logical_sector_to_chs
+	
+	; Set int 13h to save read sectors into the root directory storage
+	; place
+	mov ax, ds
+	mov es, ax
+	mov bx, root_dir_entry_storage
+	
+	mov al, 14
+	call read_sector
+	
+	; TODO: Find root directory entry
+	
 read_sector:
-    mov ah, 2 								; INT 13H, AH 2: Read disk sectors
-    push dx
+	mov ah, 2 								; INT 13H, AH 2: Read disk sectors
+	push dx
 .loop:
-    pop dx 									; DX is destroyed by some buggy BIOSes
-    push dx
-    stc 									; Set carry flag for buggy BIOSes
-    int 13h
-    
-    jnc short .end 							; End if no error
-    
-    call reset_floppy 						; Retry!
-    jnc short .loop
-    
-    jmp fatal_error 						; Double error on floppy
+	pop dx 									; DX is destroyed by some buggy BIOSes
+	push dx
+	stc 									; Set carry flag for buggy BIOSes
+	int 13h
+	
+	jnc short .end 							; End if no error
+	
+	call reset_floppy 						; Retry!
+	jnc short .loop
+	
+	jmp fatal_error 						; Double error on floppy
 .end:
-    pop dx
-    ret
-    
+	pop dx
+	ret
+	
 ;
 ; Converts logical sector (AX) to parameters for interrupt 13h
 ;
 logical_sector_to_chs:
-    push bx 								; Save registers
-    push ax
-    
-    mov bx, ax 								; Calculate physical sector
-    xor dx, dx
-    div word [sectors_per_track]
-    inc dl 									; Physical sectors starts at 1
-    mov cl, dl 								; Place in CL
-    
-    mov ax, bx 								; Calculate head
-    xor dx, dx
-    div word [sectors_per_track]
-    xor dx, dx 								; And calculate the track
-    div word [sides]
-    mov dh, dl 								; Place head
-    mov ch, al 								; Place track
-    
-    pop ax 									; Restore registers
-    pop bx
-    
-    ; Set back the device number
-    mov dl, byte [device_number]
-    
-    ret 									; Return to caller
-    
+	push bx 								; Save registers
+	push ax
+	
+	mov bx, ax 								; Calculate physical sector
+	xor dx, dx
+	div word [sectors_per_track]
+	inc dl 									; Physical sectors starts at 1
+	mov cl, dl 								; Place in CL
+	
+	mov ax, bx 								; Calculate head
+	xor dx, dx
+	div word [sectors_per_track]
+	xor dx, dx 								; And calculate the track
+	div word [sides]
+	mov dh, dl 								; Place head
+	mov ch, al 								; Place track
+	
+	pop ax 									; Restore registers
+	pop bx
+	
+	; Set back the device number
+	mov dl, byte [device_number]
+	
+	ret 									; Return to caller
+	
 ;
 
 fatal_error:
-    
-    mov ah, 0Eh
-    mov al, '!'
-    int 10h
-    
-    jmp $ ; Hang
-    
+	
+	mov ah, 0Eh
+	mov al, '!'
+	int 10h
+	
+	jmp $ ; Hang
+	
 ;
 ; Include the Floppy Disk Bootloader signature this signature is needed
 ; by legacy BIOSes and various virtualization programs like QEMU or
