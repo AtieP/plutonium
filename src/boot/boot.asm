@@ -158,9 +158,26 @@ logical_sector_to_chs:
 	pop bx
 	
 	; Set back the device number
-	mov dl, byte [device_number]
+	mov dl, byte [drive_number]
 	
 	ret 									; Return to caller
+	
+;
+; Resets main floppy drive
+;
+reset_floppy:
+	push ax
+	push dx
+	
+	xor ax, ax ; INT 13H, AH 00H, Reset Drive
+	mov dl, byte [drive_number] ; Set proper drive number
+	
+	stc ; Carry flag for bogus BIOS
+	int 13h
+	
+	pop dx
+	pop ax
+	ret
 	
 ;
 ; Fatal error, hangs and prints an exclamation mark
