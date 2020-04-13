@@ -30,9 +30,9 @@ nop
 ; As per the FAT12 specification of the 1.44 MB 3.5" Inch IBM Floppy
 ; Diskette. Byte 0F0h indicates that this is a Floppy Diskette.
 ;
-oem_id db				"BOOTDISK"			; OEM ID
+oem_id					db "BOOTDISK"		; OEM ID
 bytes_per_sector		dw 512				; Bytes per sector
-sectors_per_cluster		db 18				; Sectors per cluster
+sectors_per_cluster		db 1				; Sectors per cluster
 reserved_sectors		dw 1				; Reserved sectors
 number_of_fats			db 2				; FATs on the storage media
 root_directory_entries	dw 224				; Directory entries
