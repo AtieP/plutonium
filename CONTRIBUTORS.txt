@@ -1,0 +1,6 @@
+This file contains all the people who contributed to Plutonium.
+The names are in alphabetical order
+
+AtieP               -       https://github.com/AtieP
+midn                -       https://github.com/midn1
+SuperLeaf1995       -       https://github.com/SuperLeaf1995
