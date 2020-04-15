@@ -24,6 +24,12 @@ AFLAGS = -Wall -f bin -O0
 
 # Main targets
 compile: $(DSK_DIR)/pluto.flp
+
+run: $(DSK_DIR)/pluto.flp
+	qemu-system-i386 -fda $< -m 8M -soundhw pcspk -serial mon:stdio
+	
+reset:
+	mkdosfs -C disk/pluto.flp 1440
 	
 # Assembly for the OS
 $(BIN_DIR)/boot.sys: $(SRC_DIR)/boot/boot.asm
@@ -40,8 +46,8 @@ $(DSK_DIR)/pluto.flp: $(BIN_DIR)/boot.sys $(BIN_DIR)/kernel.sys
 	
 	mkdir tmp-loop && mount -o loop -t vfat $@ tmp-loop
 	
-	rm -rf $(BIN_DIR)/boot.sys
-	cp $(BIN_DIR)/* tmp
+	rm $(BIN_DIR)/boot.sys
+	cp $(BIN_DIR)/* tmp-loop
 	
 	sleep 0.2
 	umount tmp-loop

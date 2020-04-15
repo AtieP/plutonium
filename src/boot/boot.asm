@@ -85,9 +85,10 @@ read_kernel:
 	
 	; Set int 13h to save read sectors into the root directory storage
 	; place
+	mov si, disk_buffer
 	mov ax, ds
 	mov es, ax
-	mov bx, root_dir_entry_storage
+	mov bx, si
 	
 	mov al, 14
 	call read_sector
@@ -97,26 +98,24 @@ read_kernel:
 	
 	mov ax, ds
 	mov es, ax
-	mov di, root_dir_entry_storage
-	
+	mov di, disk_buffer
+
 	xor ax, ax
 .find_kernel:
 	mov si, kernelName
 	mov cx, 11 								; A FAT12 filename is 11 chars long
-	
 	rep cmpsb
 	je short .found_file
 	
-	add ax, 32 								; Skip one full entry
+	add ax, 20h 							; Skip one full entry
 	
-	mov di, root_dir_entry_storage
+	mov di, disk_buffer
 	add di, ax
 	
-	cmp byte [di], 0 						; Check if root directory has ended yet
+	cmp byte [es:di], 0 					; Check if root directory has ended yet
 	jnz short .find_kernel
 	
 	jmp fatal_error 						; File not found
-	
 .found_file:
 	mov ax, word [es:di+0Fh]				; Get cluster from root directory entry
 	mov word [cluster], ax					; Save it for future use
@@ -125,15 +124,17 @@ read_kernel:
 	inc ax
 	call logical_sector_to_chs
 	
-	mov di, fat_storage
+	mov di, disk_buffer
 	mov bx, di
+	
+	mov ax, word [sectors_per_fat]
+	call read_sector
 	
 	xor ax, ax								; Make the readed sectors load at
 	mov es, ax								; 0000h:0500h so we will have our kernel
 	mov bx, 0500h							; ready there!
 	
-	mov ah, 2								; Read 1 sector from disk
-	mov al, 1
+	mov ax, 0201h							; Read 1 sector from disk
 	
 	push ax
 .load_file_sector:
@@ -145,7 +146,7 @@ read_kernel:
 	xor ax, ax								; Load those data into the
 	mov es, ax								; place where the kernel is being loaded
 	mov bx, 0500h							; on
-	mov bx, word [pointer]
+	add bx, word [pointer]
 	
 	pop ax
 	push ax
@@ -163,14 +164,14 @@ read_kernel:
 ; shift it by 4 bits
 ;
 .next_cluster:
-	mov ax, word [cluster]
+	mov ax, [cluster]
 	xor dx, dx
 	mov bx, 3
 	mul bx
 	dec bx
 	div bx
 	
-	mov si, fat_storage
+	mov si, disk_buffer
 	add si, ax
 	
 	mov ax, word [ds:si]					; Get a cluster word
@@ -179,11 +180,10 @@ read_kernel:
 	jz short .even_cluster
 .odd_cluster:
 	push cx
-	
 	mov cl, 4								; Shift our cluster by 4 bits
 	shr ax, cl
-	
 	pop cx
+	
 	jmp short .check_eof
 .even_cluster:
 	and ax, 0FFFh							; Mask out all 12 bits
@@ -192,11 +192,8 @@ read_kernel:
 	cmp ax, 0FF8h							; Check for EOF
 	jae short .end							; All loaded, time to jump into kernel
 	
-	push ax
 	mov ax, [bytes_per_sector]				; Go to the next sector
 	add word [pointer], ax
-	pop ax
-	
 	jmp short .load_file_sector
 ;
 ; Everything is set and no errors were made, time to jump into the kernel
@@ -212,6 +209,22 @@ cluster			dw 0
 pointer			dw 0
 kernelName		db "KERNEL  SYS"
 	
+print:
+	push ax
+	push cx
+	
+	mov ah, 0eh
+	mov cx, 255
+.loop:
+	lodsb
+	int 10h
+	loop .loop
+.end:
+
+	pop cx
+	pop ax
+	ret
+	
 ;
 ; Reads a sector (use logical_sector_to_chs before calling!)
 ;
@@ -221,6 +234,7 @@ read_sector:
 .loop:
 	pop dx 									; DX is destroyed by some buggy BIOSes
 	push dx
+	
 	stc 									; Set carry flag for buggy BIOSes
 	int 13h
 	
@@ -244,7 +258,7 @@ logical_sector_to_chs:
 	mov bx, ax 								; Calculate physical sector
 	xor dx, dx
 	div word [sectors_per_track]
-	inc dl 									; Physical sectors starts at 1
+	add dl, 01h								; Physical sectors starts at 1
 	mov cl, dl 								; Place in CL
 	
 	mov ax, bx 								; Calculate head
@@ -284,7 +298,7 @@ reset_floppy:
 ; Fatal error, hangs and prints an exclamation mark
 ;
 fatal_error:
-	mov al, '^'
+	mov al, '<'
 	mov ah, 0Eh
 	int 10h
 	
@@ -305,5 +319,4 @@ fatal_memory_error:
 times 510-($-$$) db 0
 dw 0AA55h
 
-root_dir_entry_storage:
-fat_storage:
+disk_buffer:
