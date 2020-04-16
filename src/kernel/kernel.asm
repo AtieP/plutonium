@@ -38,3 +38,236 @@ start:
 	int 10h
 	
 	jmp $
+
+;
+; AX = Segment
+; BX = Offset
+; SI = Filename
+;
+; Reads file
+;
+read_file:
+	; Transfer stuff to variables
+	mov word [filename], si
+	mov word [segment], ax
+	mov word [offset], bx
+
+	; Read root directory entries (root directory starts at
+	; sector 19)
+	mov ax, 19
+	call logical_sector_to_chs
+	
+	; Set int 13h to save read sectors into the root directory storage
+	; place
+	mov si, disk_buffer
+	mov ax, ds
+	mov es, ax
+	mov bx, si
+	
+	mov al, 14
+	call read_sector
+	
+	; We now have the root entries in our buffer, time to read them
+	; and find the kernel
+	
+	mov ax, ds
+	mov es, ax
+	mov di, disk_buffer
+
+	xor ax, ax
+.find_kernel:
+	mov si, kernelName
+	mov cx, 11 								; A FAT12 filename is 11 chars long
+	rep cmpsb
+	je short .found_file
+	
+	add ax, 20h 							; Skip one full entry
+	
+	mov di, disk_buffer
+	add di, ax
+	
+	cmp byte [es:di], 0 					; Check if root directory has ended yet
+	jnz short .find_kernel
+	
+	jmp fatal_error 						; File not found
+.found_file:
+	mov ax, word [es:di+0Fh]				; Get cluster from root directory entry
+	mov word [cluster], ax					; Save it for future use
+	
+	xor ax, ax								; Read sector 1, where the FAT is on
+	inc ax
+	call logical_sector_to_chs
+	
+	mov di, disk_buffer
+	mov bx, di
+	
+	mov ax, word [sectors_per_fat]
+	call read_sector
+	
+	mov ax, word [segment]					; Make the readed sectors load at
+	mov es, ax								; 0000h:0500h so we will have our kernel
+	mov bx, word [offs]						; ready there!
+	
+	mov ax, 0201h							; Read 1 sector from disk
+	
+	push ax
+.load_file_sector:
+	mov ax, word [cluster]					; Retrieve cluster
+	
+	add ax, 31								; Cluster+31 = File data!
+	call logical_sector_to_chs
+	
+	mov ax, word [segment]					; Load those data into the
+	mov es, ax								; place where the kernel is being loaded
+	mov bx, word [offs]						; on
+	add bx, word [pointer]
+	
+	pop ax
+	push ax
+	
+	stc
+	int 13h
+	
+	jnc short .next_cluster
+	
+	call reset_floppy
+	jmp short .load_file_sector
+;
+; Now find the cluster by either knowing it's odd or even
+; if it is even, then mask out 12 bits of the cluster, else
+; shift it by 4 bits
+;
+.next_cluster:
+	mov ax, [cluster]
+	xor dx, dx
+	mov bx, 3
+	mul bx
+	dec bx
+	div bx
+	
+	mov si, disk_buffer
+	add si, ax
+	
+	mov ax, word [ds:si]					; Get a cluster word
+	
+	or dx, dx								; Check if our cluster even or odd
+	jz short .even_cluster
+.odd_cluster:
+	push cx
+	mov cl, 4								; Shift our cluster by 4 bits
+	shr ax, cl
+	pop cx
+	
+	jmp short .check_eof
+.even_cluster:
+	and ax, 0FFFh							; Mask out all 12 bits
+.check_eof:
+	mov word [cluster], ax					; Put cluster in cluster
+	cmp ax, 0FF8h							; Check for EOF
+	jae short .end							; All loaded, time to jump into kernel
+	
+	mov ax, [bytes_per_sector]				; Go to the next sector
+	add word [pointer], ax
+	jmp short .load_file_sector
+;
+; Everything is set and no errors were made, time to jump into the kernel
+; and do anthing from there
+;
+.end:										; File is now loaded in the ram
+	pop ax									; Pop off ax
+	
+	stc
+	
+	ret
+
+;
+; Reads a sector (use logical_sector_to_chs before calling!)
+;
+read_sector:
+	mov ah, 2 								; INT 13H, AH 2: Read disk sectors
+	push dx
+.loop:
+	pop dx 									; DX is destroyed by some buggy BIOSes
+	push dx
+	
+	stc 									; Set carry flag for buggy BIOSes
+	int 13h
+	
+	jnc short .end 							; End if no error
+	
+	call reset_floppy 						; Retry!
+	jnc short .loop
+	
+	jmp fatal_error 						; Double error on floppy
+.end:
+	pop dx
+	ret
+	
+;
+; Converts logical sector (AX) to parameters for interrupt 13h
+;
+logical_sector_to_chs:
+	push bx 								; Save registers
+	push ax
+	
+	mov bx, ax 								; Calculate physical sector
+	xor dx, dx
+	div word [sectors_per_track]
+	add dl, 01h								; Physical sectors starts at 1
+	mov cl, dl 								; Place in CL
+	
+	mov ax, bx 								; Calculate head
+	xor dx, dx
+	div word [sectors_per_track]
+	xor dx, dx 								; And calculate the track
+	div word [sides]
+	mov dh, dl 								; Place head
+	mov ch, al 								; Place track
+	
+	pop ax 									; Restore registers
+	pop bx
+	
+	; Set back the device number
+	mov dl, byte [drive_number]
+	
+	ret 									; Return to caller
+	
+;
+; Resets main floppy drive
+;
+reset_floppy:
+	push ax
+	push dx
+	
+	xor ax, ax ; INT 13H, AH 00H, Reset Drive
+	mov dl, byte [drive_number] ; Set proper drive number
+	
+	stc ; Carry flag for bogus BIOS
+	int 13h
+	
+	pop dx
+	pop ax
+	ret
+	
+;
+; Fatal error, hangs and prints an exclamation mark
+;
+fatal_error:
+	mov al, '<'
+	mov ah, 0Eh
+	int 10h
+	
+	jmp $ ; Hang
+
+cluster					dw 0
+pointer					dw 0
+filename				dw 0
+segment					dw 0
+offs					dw 0
+
+bytes_per_sector		dw 512				; Bytes per sector
+sectors_per_cluster		db 1				; Sectors per cluster
+root_directory_entries	dw 224				; Directory entries
+sectors_per_track		dw 18				; Sectors per track
+
+disk_buffer:
