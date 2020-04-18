@@ -298,7 +298,7 @@ reset_floppy:
 ; Fatal error, hangs and prints an exclamation mark
 ;
 fatal_error:
-	mov al, '<'
+	mov al, '#'
 	mov ah, 0Eh
 	int 10h
 	

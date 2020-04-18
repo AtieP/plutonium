@@ -15,7 +15,7 @@
 
 use16
 cpu 8086
-org 0700h
+org 0500h
 
 jmp start
 
@@ -33,11 +33,36 @@ start:
 	mov es, ax ; all data and extended segment into the
 	mov ds, ax ; kernel segment
 	
-	mov al, '$'
+	mov al, 'A'
 	mov ah, 0Eh
 	int 10h
 	
+	mov ax, 0700h
+	mov si, filename
+	call load_com
+	jnc .sucess
+	
 	jmp $
+.sucess:
+	jmp 0700h:0100h
+	
+filename	db "FO THE LULZ"
+	
+;
+; AX = Segment
+; SI = Filename
+;
+load_com:
+	mov bx, 0100h
+	call read_file
+	jc .error
+.success:
+	clc
+.end:
+	ret
+.error:
+	stc
+	jmp .end
 
 ;
 ; Allocates a piece of memory
@@ -51,9 +76,9 @@ start:
 ;		02h = No memory left
 ;
 alloc:
-	mov ax, 0060 ; Point at the memory table
+	mov ax, 0060h ; Point at the memory table
 	mov es, ax
-	mov di, 0C00
+	mov di, 0C00h
 	
 	mov cx, word [es:di] ; Get the number of entries
 	add bx, 2 ; Skip the word
