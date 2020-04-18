@@ -132,7 +132,7 @@ read_kernel:
 	
 	xor ax, ax								; Make the readed sectors load at
 	mov es, ax								; 0000h:0500h so we will have our kernel
-	mov bx, 0700h							; ready there!
+	mov bx, 0500h							; ready there!
 	
 	mov ax, 0201h							; Read 1 sector from disk
 	
@@ -145,7 +145,7 @@ read_kernel:
 	
 	xor ax, ax								; Load those data into the
 	mov es, ax								; place where the kernel is being loaded
-	mov bx, 0700h							; on
+	mov bx, 0500h							; on
 	add bx, word [pointer]
 	
 	pop ax
@@ -203,7 +203,7 @@ read_kernel:
 	pop ax									; Pop off ax
 	mov dl, byte [drive_number]				; Give kernel device number
 	
-	jmp 0000h:0700h							; Jump to kernel
+	jmp 0000h:0500h							; Jump to kernel
 
 cluster			dw 0
 pointer			dw 0
