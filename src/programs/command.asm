@@ -6,6 +6,20 @@ use16
 
 main:
 
+    mov ax, 0700h
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+
+    mov di, buffer
+    mov cx, 126
+    call gets
+
+    mov si, buffer
+    call puts
+
+    jmp $
+buffer: times 127 db 0
 
 ; Prints a string
 ; IN: SI = Memory address of the string
