@@ -67,6 +67,10 @@ gets:
 
 .get_chars:
 
+    test cx, cx
+    jz .done
+
+    clc
     call get_chars
 
     cmp ah, 0x1C        ; key enter
@@ -75,3 +79,47 @@ gets:
     cmp ah, 0x0E        ; key backspace
     je .handle_backspace
 
+    call putchar        ; print ASCII key
+    stosb               ; store it
+
+    dec cx
+
+    jmp .get_chars
+
+.handle_backspace:
+
+    cmp dx, cx          ; check if its on the inital position
+    je .get_chars
+
+    dec di
+    inc cx
+
+    ; get cursor position
+    mov ah, 0x03
+    xor bh, bh
+    int 10h
+
+    ; go back
+    mov ah, 0x02
+    dec dl
+    xor bh, bh
+    int 10h
+
+    ; print a space
+    mov ah, 0x0e
+    mov al, ' '
+    int 10h
+
+    stosb
+
+    jmp .get_chars
+.done:
+    xor al, al
+    stosb
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+
+    ret
