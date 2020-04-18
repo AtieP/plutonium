@@ -1,0 +1,10 @@
+Memory Map for Plutonium (Assume common 8086 and no special mapped hardware)
+
+[0000:0000] # Interrupt Vector table
+[0000:0400] # BIOS Data
+[0000:0500] # Data address
+[0000:0700] # Plutonium v1.x load address
+[0060:0C00] # Plutonoum v1.x memory table
+[0070:0000] # IO.SYS for MS-DOS 2.0+ compatibility
+[A000:0000] # VGA/CGA/EGA+ Video Buffer
+[B800:0000] # Text Mode Buffer

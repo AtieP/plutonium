@@ -15,7 +15,7 @@
 
 use16
 cpu 8086
-org 0500h
+org 0700h
 
 jmp start
 
@@ -38,6 +38,82 @@ start:
 	int 10h
 	
 	jmp $
+
+;
+; Allocates a piece of memory
+;
+; AX = Number of bytes to allocate
+;
+; Returns DX:AX ( Segment:Offset )
+; CF set on error
+; If there is error the following error codes (in AX) may return
+;		01h = Corrupt memory table
+;		02h = No memory left
+;
+alloc:
+	mov ax, 0060 ; Point at the memory table
+	mov es, ax
+	mov di, 0C00
+	
+	mov cx, word [es:di] ; Get the number of entries
+	add bx, 2 ; Skip the word
+	
+	cmp cx, word [es:di] ; Zero?, Corrupt memory table
+	jmp .corrupt_number
+.find_free:
+	;
+	; Memory Table Entries
+	; WORD - Segment
+	; WORD - Offset
+	; WORD - Size
+	; WORD - Process ID
+	; BYTE - Status
+	;
+	
+	mov bx, word [es:di+04h] ; Size
+	cmp ax, bx
+	jge .found_big
+	
+	add bx, 9 ; Skip an entire entry
+	
+	loop .find_free
+	jmp .no_free
+.found_big:
+	; We found a big block, the size is on the
+	; BX register
+	
+	cmp ax, bx ; It's simple if it's equal
+	je .found_equal
+	
+	; TODO: Add intelligent allocation
+	jmp .error
+.found_equal:
+	; Simply set the memory as "used"
+	mov bx, word [es:di+08h] ; Status
+	
+	; Set correct return value
+	mov ax, word [es:di+00h] ; Segment
+	mov dx, word [es:di+02h] ; Offset
+	jmp .sucess
+.sucess:
+	clc
+.end:
+	ret
+	
+.error:
+	xor ax, ax
+	stc
+	jmp short .end
+	
+.no_free:
+	mov ax, 01h
+	jmp .error
+	
+.corrupt_number:
+	mov ax, 02h
+	jmp .error
+	
+.tmp	times 12 db 0
 
 ;
 ; AX = Segment
